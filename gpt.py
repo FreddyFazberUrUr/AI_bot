@@ -1,37 +1,75 @@
 import requests
-
-URL = 'http://localhost:1234/v1/chat/completions'
-HEADERS = {"Content-Type": "application/json"}
+from transformers import AutoTokenizer
 
 
-def make_promt(user_request):
-    json = {
-        "messages": [
-            {"role": "system", "content": "Говори только на русском языке, отвечай на вопрос полностью. Будь добрым "
-                                          "и приветливым."},
-            {"role": "user", "content": user_request}
+class GPT:
+    def __init__(self):
+        self.URL = 'http://localhost:1234/v1/chat/completions'
+        self.HEADERS = {"Content-Type": "application/json"}
+        self.MAX_TOKENS = 50
+        self.assistant_content = "Решим задачу по шагам: "
 
-        ],
-        "temperature": 0.9,
-        "max_tokens": 50,
-    }
-    return json
+    # Подсчитываем количество токенов в промте
+    @staticmethod
+    def count_tokens(prompt):
+        tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")  # название модели
+        return len(tokenizer.encode(prompt))
 
+    # Проверка ответа на возможные ошибки и его обработка
+    def process_resp(self, response) -> [bool, str]:
+        # Проверка статус кода
+        if response.status_code < 200 or response.status_code >= 300:
+            self.clear_history()
+            return False, f"Ошибка: {response.status_code}"
 
-def process_resp(response):
-    if response.status_code == 200 and 'choices' in response.json():
-        result = response.json()['choices'][0]['message']['content']
-        return result
+        # Проверка json
+        try:
+            full_response = response.json()
+        except:
+            self.clear_history()
+            return False, "Ошибка получения JSON"
 
+        # Проверка сообщения об ошибке
+        if "error" in full_response or 'choices' not in full_response:
+            self.clear_history()
+            return False, f"Ошибка: {full_response}"
 
-def ask_gpt(user_request):
-    json = make_promt(user_request)
-    resp = requests.post(url=URL,
-                         headers=HEADERS,
-                         json=json)
+        # Результат
+        result = full_response['choices'][0]['message']['content']
 
-    if process_resp(resp) is not None:
-        return process_resp(resp)
-    else:
-        s = 'Не удалось получить ответ от нейросети. Попробуйте позже.'
-        return s
+        # Пустой результат == объяснение закончено
+        # Твой код ниже
+        if result == '':
+            self.clear_history()
+
+        # Сохраняем сообщение в историю
+        self.save_history(result)
+        return True, self.assistant_content
+
+    # Формирование промта
+    def make_promt(self, user_request):
+        json = {
+            "messages": [
+                # Добавить роль ...
+                {"role": "user", "content": user_request},
+                {"role": "assistant", "content": self.assistant_content},
+                {"role": "system", "content": "Ты - дружелюбный помощник по математике. Давай полный и "
+                 "развернутый ответ на русском языке"}
+            ],
+            "temperature": 1,
+            "max_tokens": self.MAX_TOKENS,
+        }
+        return json
+
+    # Отправка запроса
+    def send_request(self, json):
+        resp = requests.post(url=self.URL, headers=self.HEADERS, json=json)
+        return resp
+
+    # Сохраняем историю общения
+    def save_history(self, content_response):
+       self.assistant_content += content_response
+
+    # Очистка истории общения
+    def clear_history(self):
+        self.assistant_content = 'Реши задачу по шагам:'

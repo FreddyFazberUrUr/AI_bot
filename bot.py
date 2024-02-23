@@ -17,17 +17,17 @@ bot = telebot.TeleBot(token=config.token)
 
 
 @bot.message_handler(commands=['help'])
-def help_command(message):
-    bot.send_message(message.from_user.id, "Я - твой цифровой собеседник. Узнать обо мне подробнее можно командой "
+def help_command(msg):
+    bot.send_message(msg.from_user.id, "Я - твой цифровой собеседник. Узнать обо мне подробнее можно командой "
                      "/about\n<b>Для того, чтобы пользоваться нейросетью, просто отправь свой запрос в чат.</b>",
                      parse_mode='html')
 
 
 @bot.message_handler(commands=['about'])
-def about_command(message):
-    bot.send_message(message.from_user.id, text="Рад, что ты заинтересован_а! Мое предназначение — не оставлять тебя в "
-                                                "одиночестве и всячески подбадривать!"
-                                                "Ссылка на гитхаб: https://github.com/FreddyFazberUrUr/AI_bot.git")
+def about_command(msg):
+    bot.send_message(msg.from_user.id, text="Рад, что ты заинтересован_а! Мое предназначение — не оставлять тебя в "
+                                            "одиночестве и всячески подбадривать!"
+                                            "Ссылка на гитхаб: https://github.com/FreddyFazberUrUr/AI_bot.git")
 
 
 @bot.message_handler(commands=['start', 'go'])
